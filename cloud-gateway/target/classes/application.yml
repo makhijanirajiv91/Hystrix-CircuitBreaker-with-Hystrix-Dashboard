@@ -1,0 +1,57 @@
+server:
+  port: 9093
+  
+spring:  application:    name: API-GATEWAY
+  # GAteway Configuration Starts    cloud:    gateway:      routes:      - id: serviceA
+      # If Incoming request contains serviceA in it's URI, then using predicates: Path it will redirect the request to this path i.e serviceOne will be called.
+        uri: lb://serviceA
+        predicates:          - Path=/serviceOne/**
+          #Config for Hysterix starts
+        filters:
+          - name: CircuitBreaker
+            args:              name: ServiceA
+              fallbackUri: forward:/serviceOneFallBack
+          # Config for Hysterix ends
+      - id: serviceB
+        uri: lb://serviceB
+        # If Incoming request contains serviceB in it's URI, then using predicates: Path it will redirect the request to this path i.e serviceTwo will be called.
+        predicates:
+          - Path=/serviceTwo/**
+        #Config for Hysterix starts
+        filters:
+          - name: CircuitBreaker
+            args:
+              name: ServiceB
+              fallbackUri: forward:/serviceTwoFallBack
+        #Config for Hysterix Ends
+        
+        # GAteway Configuration Ends
+        
+# Hystrix config Starts
+
+# here we are providing the timeout setting as 4000 that means if the service didn't responds within 4 secs 
+# then it will call the Hystrix fallback method that we configured just above.'
+
+hystrix:
+  command:
+    fallbackcmd:
+      execution:
+        isolation:
+          thread:
+            timeoutInMilliseconds: 4000
+
+# Hystrix Config Ends                  
+# Adding config for actuators and enabling Hystrix stream
+
+management:  endpoints:    web:      exposure:        include: hystrix.stream
+
+# end
+    
+eureka:  client:    register-with-eureka: true
+    fetch-registry: true
+    service-url:      defaultZone: http://localhost:8089/eureka
+  instance:
+    hostname: localhost
+    
+    
+    
